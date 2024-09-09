@@ -48,7 +48,7 @@ def create_sin_ax_b_dataset(n_examples=2000, bsz=256): # TODO: n_examples=20000 
     print("[*] Generating sin(ax + b) Dataset...")
 
     # Constants – `a` sampled uniform from [1, 10], `b` sampled uniform [0, 5]
-    SEQ_LENGTH, N_CLASSES, IN_DIM, A_MAX, B_MAX = 16, 8, 1, 10, 5 # TODO SEQ_LENGTH=16000 in original code
+    SEQ_LENGTH, N_CLASSES, IN_DIM, A_MAX, B_MAX = 128, 8, 1, 10, 5 # TODO SEQ_LENGTH=16000 in original code
     train_data, test_data = [], []
     data_key = jax.random.PRNGKey(21)
 

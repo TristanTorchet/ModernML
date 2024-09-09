@@ -1,9 +1,17 @@
 import jax
 import jax.numpy as jnp
+import torch
 from flax import linen as nn
 from jax.nn.initializers import lecun_normal
 from utils import discretize, K_conv, scan_SSM, causal_convolution
+import math
 
+def discretize_s4d(A, B, C, step, mode="zoh"):
+    if mode == "bilinear":
+        num, denom = 1 + .5 * step*A, 1 - .5 * step*A
+        return num / denom, step * B / denom, C
+    elif mode == "zoh":
+        return jnp.exp(step*A), (jnp.exp(step*A)-1)/A * B, C
 
 def log_step_initializer(dt_min=0.001, dt_max=0.1):
     def init(key, shape):
@@ -13,7 +21,18 @@ def log_step_initializer(dt_min=0.001, dt_max=0.1):
 
     return init
 
-
+def log_A_real_initializer():
+    def init(key, shape):
+        return jnp.log(0.5 * jnp.ones(shape))
+    return init
+def A_image_initializer():
+    def init(key, shape):
+        return math.pi * jnp.arange(shape[0])
+    return init
+def C_initializer():
+    def init(key, shape):
+        return jax.random.normal(key, shape, dtype=jnp.complex64)
+    return init
 
 class SSMLayer(nn.Module):
     N: int  # State dimension
@@ -54,6 +73,36 @@ class SSMLayer(nn.Module):
                 self.x_k_1.value = x_k
             return y_s.reshape(-1).real + self.D * u
 
+class S4DLayer(nn.Module):
+    N: int  # State dimension
+    l_max: int  # Sequence length
+    decode: bool = False  # if True, use RNN mode
+
+    def setup(self):
+        self.log_A_real = self.param("log_A_real", log_A_real_initializer(), (self.N//2,))
+        self.A_imag = self.param("A_imag", A_image_initializer(), (self.N//2,))
+        self.A = -jnp.exp(self.log_A_real) + 1j * self.A_imag
+        self.B_real = self.param("B_real", nn.initializers.ones, (self.N//2,))
+        self.B_imag = self.param("B_imag", nn.initializers.zeros, (self.N//2,))
+        self.B = self.B_real + 1j * self.B_imag
+        self.C = self.param("C", C_initializer(), (self.N//2,))
+        self.D = self.param("D", nn.initializers.ones, (1,))
+        self.log_step = self.param("log_step", log_step_initializer(), (1,))
+        step = jnp.exp(self.log_step)
+        self.ssm = discretize_s4d(self.A, self.B, self.C, step=step)
+
+    def kernel(self):
+        dtA = self.A * jnp.exp(self.log_step)
+        K = dtA[:, jnp.newaxis] * jnp.arange(self.l_max)
+        exp_K = jnp.exp(K)
+        K_end = self.C @ exp_K
+        return 2 * K_end.real
+
+    def __call__(self, u):
+        K = self.kernel()
+        return causal_convolution(u, K) + self.D * u
+        
+
 
 
 def cloneLayer(layer):
@@ -74,6 +123,7 @@ def cloneLayer(layer):
 
 
 MultiHeadSSMLayer = cloneLayer(SSMLayer)  # Redefine SSMLayer as MultiHead version
+MultiHeadS4DLayer = cloneLayer(S4DLayer)  # Redefine S4DLayer as MultiHead version
 
 
 
