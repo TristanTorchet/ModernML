@@ -6,7 +6,7 @@ from functools import partial
 
 def discretize(A: jnp.ndarray, B: jnp.ndarray, C: jnp.ndarray, step: float):
     '''
-    Discretize continuous-time state-space model. We use the trapezoidal rule.
+    Discretize continuous-time state-space model. We use the trapezoidal rule (aka Bilinear, different from ZOH).
     :param A: jnp.ndarray (N, N), state transition matrix
     :param B: jnp.ndarray (N, 1), input matrix
     :param C: jnp.ndarray (1, N), output matrix

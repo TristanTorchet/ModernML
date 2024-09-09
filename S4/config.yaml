@@ -3,7 +3,7 @@ layer: s4
 seed: 0
 
 model:
-  d_model: 10 # TODO: 128
+  d_model: 20 # number of heads, TODO: 128
   n_layers: 4
   dropout: 0.0
   prenorm: true
@@ -12,7 +12,7 @@ model:
     N: 64
 
 train:
-  epochs: 100 # TODO: 10
+  epochs: 10 # TODO: 100
   bsz: 128
   lr: 0.001
   lr_schedule: false

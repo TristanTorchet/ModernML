@@ -39,6 +39,12 @@ def create_sin_x_dataset(n_examples=1024, bsz=128):
 
 
 def create_sin_ax_b_dataset(n_examples=2000, bsz=256): # TODO: n_examples=20000 (in original code)
+    '''
+    Generate a dataset of sin(ax + b) functions.
+    :param n_examples: number of examples to generate
+    :param bsz: batch size
+    :return:
+    '''
     print("[*] Generating sin(ax + b) Dataset...")
 
     # Constants – `a` sampled uniform from [1, 10], `b` sampled uniform [0, 5]

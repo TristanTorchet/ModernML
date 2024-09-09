@@ -34,10 +34,16 @@ class SSMLayer(nn.Module):
         self.ssm = discretize(self.A, self.B, self.C, step=step)
         self.K = K_conv(*self.ssm, self.l_max)
 
-        # RNN cache for long sequences
+        # For RNN mode we need to remember the previous state
+        # x_k_1 means x_{k-1}
         self.x_k_1 = self.variable("cache", "cache_x_k", jnp.zeros, (self.N,))
 
     def __call__(self, u):
+        '''
+
+        :param u: input to the SSM jnp.array (l_max,)
+        :return:
+        '''
         if not self.decode:
             # CNN Mode
             return causal_convolution(u, self.K) + self.D * u
@@ -52,8 +58,9 @@ class SSMLayer(nn.Module):
 
 def cloneLayer(layer):
     '''
-    Clone a layer in parallel with the same parameters and cache.
-
+    We need to replicate the SSM block multiple times (heads).
+    We replicate the structure but not the parameters.
+    The parameters are generated in each head separately.
     :param layer:
     :return:
     '''
@@ -61,12 +68,12 @@ def cloneLayer(layer):
         layer,
         in_axes=1,
         out_axes=1,
-        variable_axes={"params": 1, "cache": 1, "prime": 1},
+        variable_axes={"params": 1, "cache": 1, "prime": 1}, #TODO: "prime" where is it defined?
         split_rngs={"params": True},
     )
 
 
-SSMLayer = cloneLayer(SSMLayer)  # Redefine SSMLayer as stacked layers
+MultiHeadSSMLayer = cloneLayer(SSMLayer)  # Redefine SSMLayer as MultiHead version
 
 
 
@@ -137,7 +144,7 @@ class StackedModel(nn.Module):
     dropout: float = 0.0
     embedding: bool = False  # Use nn.Embed instead of nn.Dense encoder
     classification: bool = False
-    training: bool = True
+    training: bool = True # If True, use dropout (in SequenceBlock)
     decode: bool = False  # Probably should be moved into layer_args
 
     def setup(self):
