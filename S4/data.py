@@ -199,6 +199,37 @@ def create_cifar_classification_dataset(bsz=128):
 
     return trainloader, testloader, N_CLASSES, SEQ_LENGTH, IN_DIM
 
+def create_cifar_gs_classification_dataset(bsz=128):
+    print("[*] Generating CIFAR-10 Classification Dataset")
+
+    # Constants
+    SEQ_LENGTH, N_CLASSES, IN_DIM = 32 * 32, 10, 1
+    tf = transforms.Compose(
+        [
+            transforms.Grayscale(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=122.6 / 255.0, std=61.0 / 255.0),
+            transforms.Lambda(lambda x: x.view(1, SEQ_LENGTH).t()),
+        ]
+    )
+
+    train = torchvision.datasets.CIFAR10(
+        "./data", train=True, download=True, transform=tf
+    )
+    test = torchvision.datasets.CIFAR10(
+        "./data", train=False, download=True, transform=tf
+    )
+
+    # Return data loaders, with the provided batch size
+    trainloader = torch.utils.data.DataLoader(
+        train, batch_size=bsz, shuffle=True
+    )
+    testloader = torch.utils.data.DataLoader(
+        test, batch_size=bsz, shuffle=False
+    )
+
+    return trainloader, testloader, N_CLASSES, SEQ_LENGTH, IN_DIM
+
 
 Datasets = {
     "mnist": create_mnist_dataset,
@@ -210,6 +241,7 @@ Datasets = {
     "mnist-classification": create_mnist_classification_dataset,
     # "fsdd-classification": create_fsdd_classification_dataset,
     "cifar-classification": create_cifar_classification_dataset,
+    "cifar-gs-classification": create_cifar_gs_classification_dataset,
     # "imdb-classification": create_imdb_classification_dataset,
     # "listops-classification": create_listops_classification_dataset,
 }
